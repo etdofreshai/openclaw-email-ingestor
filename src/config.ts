@@ -9,6 +9,7 @@ interface Config {
     pass: string;
   };
   port: number;
+  apiToken: string;
 }
 
 function requireEnv(name: string): string {
@@ -27,4 +28,5 @@ export const config: Config = {
     pass: requireEnv('IMAP_PASSWORD'),
   },
   port: parseInt(process.env.PORT || '3000', 10),
+  apiToken: requireEnv('API_BEARER_TOKEN'),
 };

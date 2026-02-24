@@ -13,6 +13,16 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Bearer token auth for all /api routes (except health)
+app.use('/api', (req, res, next) => {
+  const auth = req.headers.authorization;
+  if (auth === `Bearer ${config.apiToken}`) {
+    next();
+    return;
+  }
+  res.status(401).json({ error: 'Unauthorized — provide a valid Bearer token' });
+});
+
 app.use('/api/mailboxes', mailboxesRouter);
 app.use('/api/emails', emailsRouter);
 

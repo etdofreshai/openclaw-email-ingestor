@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Ingestor API Tester</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 24px; }
+    h1 { margin-bottom: 24px; color: #58a6ff; }
+    h2 { margin-bottom: 8px; color: #8b949e; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .endpoints { display: flex; flex-direction: column; gap: 16px; max-width: 800px; }
+    .endpoint { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+    .endpoint-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .method { background: #238636; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .path { font-family: monospace; font-size: 14px; color: #f0f6fc; }
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 10px; border-radius: 4px; font-size: 13px; font-family: monospace; }
+    input::placeholder { color: #484f58; }
+    button { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    button:hover { background: #30363d; border-color: #8b949e; }
+    .result { margin-top: 12px; display: none; }
+    .result.visible { display: block; }
+    .result-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .status { font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+    .status.ok { background: #238636; color: #fff; }
+    .status.err { background: #da3633; color: #fff; }
+    .time { font-size: 12px; color: #484f58; }
+    pre { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 12px; overflow-x: auto; font-size: 12px; line-height: 1.5; max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Email Ingestor API</h1>
+
+  <div class="endpoints">
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method">GET</span>
+        <span class="path">/api/health</span>
+      </div>
+      <div class="controls">
+        <button onclick="callApi('/api/health', 'health-result')">Send</button>
+      </div>
+      <div class="result" id="health-result"></div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method">GET</span>
+        <span class="path">/api/mailboxes</span>
+      </div>
+      <div class="controls">
+        <button onclick="callApi('/api/mailboxes', 'mailboxes-result')">Send</button>
+      </div>
+      <div class="result" id="mailboxes-result"></div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method">GET</span>
+        <span class="path">/api/emails</span>
+      </div>
+      <div class="controls">
+        <input type="text" id="list-mailbox" placeholder="mailbox (INBOX)" size="14">
+        <input type="number" id="list-page" placeholder="page (1)" size="8" min="1">
+        <input type="number" id="list-limit" placeholder="limit (20)" size="8" min="1" max="50">
+        <button onclick="listEmails()">Send</button>
+      </div>
+      <div class="result" id="emails-result"></div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method">GET</span>
+        <span class="path">/api/emails/search</span>
+      </div>
+      <div class="controls">
+        <input type="text" id="search-q" placeholder="from:alice subject:invoice hello" size="40" title="Plain words search everything. Prefixes: from: to: subject: body: cc: — use quotes for phrases e.g. from:&quot;john doe&quot;">
+        <input type="text" id="search-mailbox" placeholder="mailbox (All Mail)" size="14">
+        <input type="number" id="search-page" placeholder="page (1)" size="8" min="1">
+        <input type="number" id="search-limit" placeholder="limit (20)" size="8" min="1" max="50">
+        <button onclick="searchEmails()">Send</button>
+      </div>
+      <div class="result" id="search-result"></div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method">GET</span>
+        <span class="path">/api/emails/:uid</span>
+      </div>
+      <div class="controls">
+        <input type="number" id="uid-input" placeholder="UID" size="10" min="1">
+        <input type="text" id="uid-mailbox" placeholder="mailbox (INBOX)" size="14">
+        <button onclick="getEmail()">Send</button>
+      </div>
+      <div class="result" id="uid-result"></div>
+    </div>
+  </div>
+
+  <script>
+    async function callApi(url, resultId) {
+      const el = document.getElementById(resultId);
+      el.classList.add('visible');
+      el.innerHTML = '<span class="time">Loading...</span>';
+      const start = performance.now();
+
+      try {
+        const res = await fetch(url);
+        const ms = Math.round(performance.now() - start);
+        const data = await res.json();
+        const ok = res.ok;
+        el.innerHTML = `
+          <div class="result-header">
+            <span class="status ${ok ? 'ok' : 'err'}">${res.status}</span>
+            <span class="time">${ms}ms</span>
+          </div>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (err) {
+        const ms = Math.round(performance.now() - start);
+        el.innerHTML = `
+          <div class="result-header">
+            <span class="status err">ERR</span>
+            <span class="time">${ms}ms</span>
+          </div>
+          <pre>${err.message}</pre>
+        `;
+      }
+    }
+
+    function listEmails() {
+      const params = new URLSearchParams();
+      const mailbox = document.getElementById('list-mailbox').value;
+      const page = document.getElementById('list-page').value;
+      const limit = document.getElementById('list-limit').value;
+      if (mailbox) params.set('mailbox', mailbox);
+      if (page) params.set('page', page);
+      if (limit) params.set('limit', limit);
+      const qs = params.toString();
+      callApi(`/api/emails${qs ? '?' + qs : ''}`, 'emails-result');
+    }
+
+    function searchEmails() {
+      const q = document.getElementById('search-q').value;
+      if (!q) { alert('Enter a search query'); return; }
+      const params = new URLSearchParams({ q });
+      const mailbox = document.getElementById('search-mailbox').value;
+      const page = document.getElementById('search-page').value;
+      const limit = document.getElementById('search-limit').value;
+      if (mailbox) params.set('mailbox', mailbox);
+      if (page) params.set('page', page);
+      if (limit) params.set('limit', limit);
+      callApi(`/api/emails/search?${params}`, 'search-result');
+    }
+
+    function getEmail() {
+      const uid = document.getElementById('uid-input').value;
+      if (!uid) { alert('Enter a UID'); return; }
+      const params = new URLSearchParams();
+      const mailbox = document.getElementById('uid-mailbox').value;
+      if (mailbox) params.set('mailbox', mailbox);
+      const qs = params.toString();
+      callApi(`/api/emails/${uid}${qs ? '?' + qs : ''}`, 'uid-result');
+    }
+  </script>
+</body>
+</html>

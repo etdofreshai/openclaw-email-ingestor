@@ -48,7 +48,7 @@ CREATE TABLE email_filters (
 );
 ```
 
-- On startup: auto-populate allow list from existing `contacts` table (email addresses)
+- On startup: auto-populate allow list from existing `people` table (email addresses)
 - Manual entries can be added/edited/deleted via UI
 - Wildcard support: `*@domain.com` to allow entire domains
 - Block rules override allow rules
@@ -102,7 +102,7 @@ BACKEND_PORT=3001
 - Uses existing `messages` and `sources` tables — do not change schema
 - Add `email` source to `sources` table on first run if not present
 - New `email_filters` table created on startup via migration
-- `contacts` table used as seed data for initial allow list
+- `people` table used as seed data for initial allow list
 
 ## Future Ideas
 

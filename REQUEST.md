@@ -118,3 +118,26 @@ BACKEND_PORT=3001
 - `vite`, `tsx`, `typescript` in `dependencies` (not devDependencies)
 - No hardcoded port in vite.config
 - Proxy rules for `/api` and `^/proxy/\d+/api`
+
+---
+
+## Status Endpoint
+
+Exposes `GET /api/status` for health reporting and sync data. Used by OpenClaw directly or via an aggregator.
+
+```json
+{
+  "service": "email",
+  "status": "ok",
+  "last_sync": "2026-02-25T03:00:00Z",
+  "emails_ingested_total": 2841,
+  "emails_ingested_last_30_days": 94,
+  "filter_rules_count": 28,
+  "allowed_senders": 22,
+  "blocked_senders": 6,
+  "imap_reachable": true,
+  "cached_at": "2026-02-25T03:00:00Z"
+}
+```
+
+Cache TTL: 5 minutes. Force refresh with `GET /api/status?refresh=true`.
